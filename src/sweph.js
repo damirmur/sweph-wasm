@@ -98,6 +98,72 @@ export async function createSweph(factory, opts = {}) {
 		}
 	}
 
+	// Буферы для одиночных вызовов (уточнение точных аспектов): выделяем один
+	// раз, чтобы золотое сечение не аллоцировало память на каждой итерации.
+	const posIdsPtr = mod._malloc(4);
+	const posLonPtr = mod._malloc(8);
+	const posLatPtr = mod._malloc(8);
+	const posSpeedPtr = mod._malloc(8);
+
+	/** Позиция одной планеты на моменте jd (без домов). */
+	function position(jd, id) {
+		mod.HEAP32[posIdsPtr >> 2] = id;
+		const r = mod._astro_positions(jd, posIdsPtr, 1, posLonPtr, posLatPtr, posSpeedPtr);
+		if (r < 0) throw new Error('astro_positions: код ' + r);
+		return {
+			lon: mod.HEAPF64[posLonPtr >> 3],
+			lat: mod.HEAPF64[posLatPtr >> 3],
+			speed: mod.HEAPF64[posSpeedPtr >> 3],
+		};
+	}
+
+	/** Номер дома для готовой позиции (синастрия: планеты второй карты в домах первой). */
+	function housePos({ armc, lat, eps, hsys = 'P', lon, planetLat = 0 }) {
+		const code = typeof hsys === 'string' ? hsys.charCodeAt(0) : hsys;
+		return mod._astro_house_pos(armc, lat, eps, code, lon, planetLat);
+	}
+
+	/** Натальная карта: куспиды, углы, планеты с номерами домов. */
+	function natal({ jd, lat, lon, hsys = 'P', planets = DEFAULT_PLANETS }) {
+		const ids = Array.from(planets);
+		const n = ids.length;
+		const cuspsPtr = mod._malloc(13 * 8);
+		const ascmcPtr = mod._malloc(10 * 8);
+		const idsPtr = mod._malloc(n * 4);
+		const lonPtr = mod._malloc(n * 8);
+		const latPtr = mod._malloc(n * 8);
+		const speedPtr = mod._malloc(n * 8);
+		const housePtr = mod._malloc(n * 4);
+		try {
+			mod.HEAP32.set(Int32Array.from(ids), idsPtr >> 2);
+			const code = typeof hsys === 'string' ? hsys.charCodeAt(0) : hsys;
+			const r = mod._astro_natal(jd, lat, lon, code, idsPtr, n, cuspsPtr, ascmcPtr, lonPtr, latPtr, speedPtr, housePtr);
+			if (r !== 0) throw new Error('astro_natal: код ' + r);
+			const lonView = mod.HEAPF64;
+			const houseView = mod.HEAP32;
+			const points = ids.map((id, i) => ({
+				id,
+				lon: lonView[(lonPtr >> 3) + i],
+				lat: lonView[(latPtr >> 3) + i],
+				speed: lonView[(speedPtr >> 3) + i],
+				house: houseView[(housePtr >> 2) + i],
+			}));
+			return {
+				cusps: lonView.slice(cuspsPtr >> 3, (cuspsPtr >> 3) + 13),
+				ascmc: lonView.slice(ascmcPtr >> 3, (ascmcPtr >> 3) + 10),
+				planets: points,
+			};
+		} finally {
+			mod._free(cuspsPtr);
+			mod._free(ascmcPtr);
+			mod._free(idsPtr);
+			mod._free(lonPtr);
+			mod._free(latPtr);
+			mod._free(speedPtr);
+			mod._free(housePtr);
+		}
+	}
+
 	/**
 	 * Позиции планет за период.
 	 * @param {object} p
@@ -164,5 +230,5 @@ export async function createSweph(factory, opts = {}) {
 		return { lon, lat, speed, steps, planets: ids };
 	}
 
-	return { version, utcToJd, houses, period, hoursPerDay: HOURS_PER_DAY };
+	return { version, utcToJd, houses, position, housePos, natal, period, hoursPerDay: HOURS_PER_DAY };
 }

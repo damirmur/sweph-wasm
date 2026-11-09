@@ -48,7 +48,7 @@ emcc -O3 \
 	-sINITIAL_MEMORY=67108864 \
 	-sSTACK_SIZE=1048576 \
 	-sFORCE_FILESYSTEM=1 \
-	-sEXPORTED_FUNCTIONS=_astro_init,_astro_utc_to_jd,_astro_period,_astro_houses,_astro_version,_malloc,_free \
+	-sEXPORTED_FUNCTIONS=_astro_init,_astro_utc_to_jd,_astro_period,_astro_positions,_astro_house_pos,_astro_natal,_astro_houses,_astro_version,_malloc,_free \
 	-sEXPORTED_RUNTIME_METHODS=HEAPU8,HEAPF64,HEAP32 \
 	--preload-file ephe@/ephe
 

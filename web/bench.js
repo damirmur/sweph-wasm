@@ -4,6 +4,7 @@
  */
 import createModule from '../dist/sweph.mjs';
 import { createSweph, DEFAULT_PLANETS } from '../src/sweph.js';
+import { computeNatalPeriod, jdFromMs } from '../src/astro.js';
 
 let swePromise = null;
 function swe() {
@@ -102,6 +103,33 @@ window.runCancelBench = async ({ years = 10, stepDays = 1, planets = DEFAULT_PLA
 	} finally {
 		worker.terminate();
 	}
+};
+
+/** Полный natal-period: натал + транзиты + события enter/exact/leave. */
+window.runNatalPeriodBench = async ({ years = 1, stepHours = 24, maxOrb = 1, planets, refine = 'golden' } = {}) => {
+	const s = await swe();
+	const natalMs = Date.UTC(1990, 5, 15, 12, 0, 0);
+	const startMs = Date.UTC(2026, 0, 1);
+	const endMs = startMs + Math.round(years * 365.25 * 86400000);
+	const t0 = performance.now();
+	const res = await computeNatalPeriod(s, {
+		natal: { jd: jdFromMs(s, natalMs), lat: 55.75, lon: 37.61 },
+		startJd: jdFromMs(s, startMs),
+		endJd: jdFromMs(s, endMs),
+		startMs,
+		stepHours,
+		maxOrb,
+		transitPlanets: planets || DEFAULT_PLANETS,
+		refine,
+	});
+	return {
+		years,
+		steps: res.transits.date.length,
+		events: res.aspects.length,
+		ms: performance.now() - t0,
+		refine,
+		version: s.version,
+	};
 };
 
 window.benchReady = true;

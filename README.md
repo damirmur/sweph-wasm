@@ -39,15 +39,39 @@ const res = await swe.period({
 В Worker — `web/worker.js`: сообщения `init` / `calc` / `cancel`, обратно
 `ready` / `progress` / `done` / `error`.
 
+## Прикладной слой (`src/astro.js`)
+
+Порт `pkg/astro` (swisseph_build): натал, синастрия, транзитный период,
+аспекты, баланс, дома. Структуры ответа совпадают с `/api/v1/*`, поэтому
+результат можно подставить вместо серверного.
+
+```js
+import { computeNatalPeriod } from './src/astro.js';
+
+const res = await computeNatalPeriod(swe, {
+  natal: { jd: natalJd, lat: 55.75, lon: 37.61 },
+  startJd, endJd, startMs, stepHours: 24, maxOrb: 1,
+  refine: 'newton',            // 'golden' — паритет с сервером, 'newton' — скорость
+  timeZone: 'Europe/Moscow',
+});
+// res.natal, res.transits, res.aspects — как в /api/v1/natal-period
+```
+
+- `golden` — золотое сечение по секундной сетке, даты совпадают с сервером
+  в пределах 1 с (паритетные тесты).
+- `newton` — метод Ньютона, 4–6 вызовов вместо 20; даты отличаются до ~7 с,
+  зато 1 год считается за 0,99 с даже при троттлинге ×6.
+
 ## Замеры и паритет
 
 ```bash
 npm i                 # playwright для замеров (браузеры уже в ~/.cache/ms-playwright)
-node bench/bench.mjs  # Chromium, CPU throttling 1×/4×/6×, 1/5/10 лет
-node bench/parity.mjs # wasm vs нативная сборка, max |Δ| по долготе/широте/скорости
+node bench/bench.mjs         # Chromium, CPU throttling 1×/4×/6×, позиции и natal-period
+node bench/parity.mjs        # wasm vs нативная сборка, max |Δ|
+node bench/parity-astro.mjs  # клиентский слой vs golden-фикстуры astro3d-e2e
 ```
 
-Результаты первого прогона — [`BENCH.md`](BENCH.md).
+Результаты — [`BENCH.md`](BENCH.md).
 
 ## Лицензия
 

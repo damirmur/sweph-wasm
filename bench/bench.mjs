@@ -81,6 +81,19 @@ try {
 			console.log(`×${rate}  ${years} лет  ${r.steps} срезов  ${Math.round(r.ms)} мс  (${r.runs.map((x) => Math.round(x)).join(', ')})`);
 		}
 
+		for (const years of quick ? [1, 10] : [1, 5, 10]) {
+			const r = await page.evaluate(({ years }) => window.runNatalPeriodBench({ years }), { years });
+			rows.push({ rate, years, natalPeriod: true, steps: r.steps, events: r.events, ms: Math.round(r.ms) });
+			console.log(`×${rate}  natal-period ${years} лет  ${r.steps} срезов, ${r.events} событий  ${Math.round(r.ms)} мс`);
+		}
+		if (rate === 1 || rate === 6) {
+			for (const years of [1, 10]) {
+				const r = await page.evaluate(({ years }) => window.runNatalPeriodBench({ years, refine: 'newton' }), { years });
+				rows.push({ rate, years, natalPeriod: true, newton: true, steps: r.steps, events: r.events, ms: Math.round(r.ms) });
+				console.log(`×${rate}  natal-period (newton) ${years} лет  ${r.steps} срезов, ${r.events} событий  ${Math.round(r.ms)} мс`);
+			}
+		}
+
 		if (rate === 1) {
 			const w = await page.evaluate(() => window.runWorkerBench({ years: 1 }));
 			console.log(`worker: 1 год — ${Math.round(w.ms)} мс, прогресс-событий: ${w.progress}`);
@@ -102,9 +115,14 @@ console.log(JSON.stringify(rows, null, 2));
 console.log('\nMarkdown:');
 console.log('| CPU | Период | Срезов | Время, мс |');
 console.log('|---|---|---|---|');
-for (const r of rows.filter((x) => x.rate > 0)) {
+for (const r of rows.filter((x) => x.rate > 0 && !x.natalPeriod)) {
 	console.log(`| ×${r.rate} | ${r.years} г. | ${r.steps} | ${r.ms} |`);
 }
 const w = rows.find((x) => x.worker);
 if (w) console.log(`| ×1 (worker) | 1 г. | ${w.steps} | ${w.ms} |`);
-console.log(`\nмедиана по 3 прогонам; версия SE: ${rows[0]?.version}`);
+console.log('\n| CPU | natal-period | Срезов | Событий | Время, мс |');
+console.log('|---|---|---|---|---|');
+for (const r of rows.filter((x) => x.natalPeriod)) {
+	console.log(`| ×${r.rate}${r.newton ? ' newton' : ''} | ${r.years} г. | ${r.steps} | ${r.events} | ${r.ms} |`);
+}
+console.log(`\nмедиана по 3 прогонам (позиции); natal-period — один прогон; версия SE: ${rows[0]?.version}`);

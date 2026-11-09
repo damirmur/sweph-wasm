@@ -62,6 +62,83 @@ int astro_period(double jd_start, double step_days, int n_steps,
 	return n_steps;
 }
 
+/* astro_positions — позиции на одном срезе (для уточнения точных аспектов).
+ * Та же семантика, что у astro_period с n_steps=1, но без цикла по срезам. */
+int astro_positions(double jd_ut, const int32_t *ids, int n_ids,
+                    double *lon, double *lat, double *speed) {
+	char serr[256];
+	int k;
+	for (k = 0; k < n_ids; k++) {
+		double xx[6];
+		int32_t r;
+		serr[0] = '\0';
+		r = swe_calc_ut(jd_ut, ids[k], SEFLG_SWIEPH | SEFLG_SPEED, xx, serr);
+		if (r < 0) {
+			return -(k + 1);
+		}
+		lon[k] = xx[0];
+		lat[k] = xx[1];
+		speed[k] = xx[3];
+	}
+	return n_ids;
+}
+
+/* astro_house_pos — номер дома для уже посчитанной позиции (для синастрии:
+ * планеты второй карты ставятся в дома первой). */
+int astro_house_pos(double armc, double geolat, double eps, int hsys,
+                    double lon, double lat) {
+	double xx[6];
+	char serr[256];
+	xx[0] = lon;
+	xx[1] = lat;
+	xx[2] = 0.0;
+	xx[3] = 0.0;
+	xx[4] = 0.0;
+	xx[5] = 0.0;
+	serr[0] = '\0';
+	return (int)swe_house_pos(armc, geolat, eps, hsys, xx, serr);
+}
+
+/* astro_natal — натальная карта: дома + планеты с номерами домов.
+ * cusps — 13 double (1..12), ascmc — 10 double; массивы планет — n_ids.
+ * Возвращает 0 или отрицательный номер сбойной планеты. */
+int astro_natal(double jd_ut, double geolat, double geolon, int hsys,
+                const int32_t *ids, int n_ids,
+                double *cusps, double *ascmc,
+                double *lon, double *lat, double *speed, int *house) {
+	double cusp[13];
+	double angles[10];
+	double armc, eps[6];
+	char serr[256];
+	int k;
+
+	serr[0] = '\0';
+	if (swe_houses(jd_ut, geolat, geolon, hsys, cusp, angles) < 0) {
+		return -1;
+	}
+	memcpy(cusps, cusp, sizeof(cusp));
+	memcpy(ascmc, angles, sizeof(angles));
+	armc = angles[2];
+
+	serr[0] = '\0';
+	if (swe_calc_ut(jd_ut, SE_ECL_NUT, SEFLG_SWIEPH, eps, serr) < 0) {
+		return -1;
+	}
+
+	for (k = 0; k < n_ids; k++) {
+		double xx[6];
+		serr[0] = '\0';
+		if (swe_calc_ut(jd_ut, ids[k], SEFLG_SWIEPH | SEFLG_SPEED, xx, serr) < 0) {
+			return -(k + 1);
+		}
+		lon[k] = xx[0];
+		lat[k] = xx[1];
+		speed[k] = xx[3];
+		house[k] = (int)swe_house_pos(armc, geolat, eps[0], hsys, xx, serr);
+	}
+	return 0;
+}
+
 /* astro_houses — куспиды и углы домов. cusps — 13 double (индекс 1..12),
  * ascmc — 10 double (Asc, MC, ARMC, Vertex, ...). Возвращает код swe_houses. */
 int astro_houses(double jd_ut, double geolat, double geolon, int hsys,
