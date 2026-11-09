@@ -1,0 +1,43 @@
+# NOTICE — лицензии и происхождение кода
+
+## Лицензия репозитория
+
+Copyright (C) 2026 Муратов Дамир Юсифович.
+
+Код обёртки, JS-слоя и скриптов сборки распространяется под **GNU Affero
+General Public License v3.0** — полный текст в [`LICENSE`](LICENSE).
+
+## Swiss Ephemeris
+
+Copyright (C) 1997–2021 Astrodienst AG, Switzerland. All rights reserved.
+Authors: Dieter Koch and Alois Treindl.
+
+- Исходники: `third_party/swisseph/` (9 файлов из upstream-`SWEOBJ`) и
+  `third_party/swisseph/include/`.
+- Upstream: <https://github.com/aloistr/swisseph>
+- Тег: `v2.10.3final`, commit `af9823fe7b06ffefe3d3968fdc5680be8b5eec5f`
+- `SE_VERSION`: `2.10.03`
+- Условия двойного лицензирования: `third_party/swisseph/LICENSE`
+- Выбранная лицензия: **AGPL-3.0** (`third_party/swisseph/agpl-3.0.txt`)
+
+Файлы эфемерид (`sepl_18.se1`, `semo_18.se1`, `seas_18.se1`) — данные
+Astrodienst, распространяются на тех же условиях. В репозитории не хранятся:
+`scripts/prepare-ephe.sh` копирует их из `/home/dmyr/app/data/ephe` или качает
+с <https://www.astro.com/ftp/swisseph/ephe/>.
+
+## Corresponding Source
+
+Всё, что нужно для сборки: `src/astro_wasm.c`, `src/sweph.js`, `web/worker.js`,
+`third_party/swisseph/*`, `scripts/build-wasm.sh`, `scripts/build-native.sh`.
+Сборка:
+
+```bash
+./scripts/build-wasm.sh
+```
+
+## Source offer (§13 AGPL)
+
+Сервис <https://astro3d.ru> использует расчётный контур (в том числе эту
+wasm-сборку, когда она будет подключена) по сети. Исходный код:
+<https://github.com/damirmur/sweph-wasm>, <https://github.com/damirmur/astro-core>,
+<https://github.com/damirmur/swisseph_build>.

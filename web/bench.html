@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>sweph-wasm — стенд</title>
+    <style>
+        body { font: 15px/1.5 system-ui, sans-serif; margin: 24px; color: #222; }
+        code { background: #f2f2f2; padding: 1px 4px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>sweph-wasm — стенд</h1>
+    <p>Статус: <span id="status">загрузка…</span></p>
+    <p>Страница нужна только для замеров: Playwright вызывает <code>window.runBench</code>,
+        <code>window.runWorkerBench</code> и <code>window.runCancelBench</code>.</p>
+    <script type="module" src="/web/bench.js"></script>
+</body>
+</html>
