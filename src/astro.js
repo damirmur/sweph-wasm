@@ -222,10 +222,10 @@ export function formatRFC3339(ms, timeZone = 'UTC') {
 }
 
 /** Натальная карта: позиции, дома, аспекты, баланс (ComputeNatal + ToNatalData). */
-export function computeNatal(swe, { jd, lat, lon, hsys = 'P', planets = PLANET_IDS }) {
+export function computeNatal(swe, { jd, lat, lon, hsys = 'P', planets = PLANET_IDS, houses = true }) {
 	const chart = swe.natal({ jd, lat, lon, hsys, planets });
-	const points = chart.planets.map((p) => ({ id: p.id, lon: p.lon, speed: p.speed, house: p.house }));
-	const cusps = Array.from(chart.cusps.slice(1, 13));
+	const points = chart.planets.map((p) => ({ id: p.id, lon: p.lon, speed: p.speed, house: houses ? p.house : 0 }));
+	const cusps = houses ? Array.from(chart.cusps.slice(1, 13)) : [];
 	return {
 		planets: points,
 		cusps,
@@ -318,10 +318,11 @@ export async function computeNatalPeriod(swe, {
 	aspectAngles = MAJOR_ASPECT_ANGLES,
 	timeZone = 'UTC',
 	refine = 'golden',
+	houses = true,
 }) {
 	const prof = { natal: 0, positions: 0, loop: 0, exact: 0, exactCalls: 0 };
 	const tNatal = performance.now();
-	const natal = computeNatal(swe, natalInput);
+	const natal = computeNatal(swe, { ...natalInput, houses });
 	prof.natal = performance.now() - tNatal;
 	const cusps = natal.cusps;
 	const natalLons = natal.planets.map((p) => p.lon);
