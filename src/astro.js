@@ -25,6 +25,29 @@ export const ASPECT_NAMES = Object.freeze({
 	90: 'Square', 120: 'Trine', 135: 'Sesquiquadrate', 180: 'Opposition',
 });
 
+/** Словари meta ответа API — для подписей и ИИ-промптов на клиенте. */
+export const ASTRO_META = Object.freeze({
+	planets: {
+		0: 'Sun', 1: 'Moon', 2: 'Mercury', 3: 'Venus', 4: 'Mars',
+		5: 'Jupiter', 6: 'Saturn', 7: 'Uranus', 8: 'Neptune', 9: 'Pluto',
+		10: 'Mean Node', 11: 'North Node', 12: 'Lilith', 13: 'Osc. Apogee',
+	},
+	signs: {
+		0: 'Aries', 1: 'Taurus', 2: 'Gemini', 3: 'Cancer', 4: 'Leo', 5: 'Virgo',
+		6: 'Libra', 7: 'Scorpio', 8: 'Sagittarius', 9: 'Capricorn', 10: 'Aquarius', 11: 'Pisces',
+	},
+	aspects: {
+		0: 'Conjunction', 30: 'Semi-sextile', 60: 'Sextile', 72: 'Quintile',
+		90: 'Square', 120: 'Trine', 135: 'Sesquiquadrate', 180: 'Opposition',
+	},
+	houses: {
+		B: 'Alcabitus', C: 'Campanus', E: 'Equal', G: 'Gauquelin sectors',
+		H: 'Azimuthal (horizontal)', K: 'Koch', M: 'Morinus', O: 'Porphyry',
+		P: 'Placidus', R: 'Regiomontanus', T: 'Polich/Page (topocentric)',
+		V: 'Vehlow equal', W: 'Equal (whole sign)', X: 'Axial rotation',
+	},
+});
+
 /** Мажорные аспекты с орбами — как MajorAspects в pkg/astro/aspects.go. */
 export const MAJOR_ASPECTS = Object.freeze([
 	{ name: 'Conjunction', angle: 0, orb: 6.0 },
@@ -72,7 +95,7 @@ export function calculateAspect(lon1, lon2) {
 }
 
 /** Аспекты внутри одной карты (buildAspects). */
-export function buildAspects(planets) {
+export function buildAspects(planets, { angles = null, maxOrb = null } = {}) {
 	const list = [];
 	for (let i = 0; i < planets.length; i++) {
 		for (let j = i + 1; j < planets.length; j++) {
@@ -80,6 +103,8 @@ export function buildAspects(planets) {
 			const p2 = planets[j];
 			const asp = calculateAspect(p1.lon, p2.lon);
 			if (!asp) continue;
+			if (angles && !angles.includes(asp.angle)) continue;
+			if (maxOrb != null && asp.orb > maxOrb) continue;
 			list.push({
 				planet_1_id: p1.id,
 				planet_2_id: p2.id,
@@ -222,14 +247,14 @@ export function formatRFC3339(ms, timeZone = 'UTC') {
 }
 
 /** Натальная карта: позиции, дома, аспекты, баланс (ComputeNatal + ToNatalData). */
-export function computeNatal(swe, { jd, lat, lon, hsys = 'P', planets = PLANET_IDS, houses = true }) {
+export function computeNatal(swe, { jd, lat, lon, hsys = 'P', planets = PLANET_IDS, houses = true, aspectAngles = null, maxOrb = null }) {
 	const chart = swe.natal({ jd, lat, lon, hsys, planets });
 	const points = chart.planets.map((p) => ({ id: p.id, lon: p.lon, speed: p.speed, house: houses ? p.house : 0 }));
 	const cusps = houses ? Array.from(chart.cusps.slice(1, 13)) : [];
 	return {
 		planets: points,
 		cusps,
-		aspects: buildAspects(points),
+		aspects: buildAspects(points, { angles: aspectAngles, maxOrb }),
 		balance: computeBalance(points),
 		ascmc: Array.from(chart.ascmc),
 	};
@@ -246,8 +271,11 @@ export function toNatalData(chart) {
 }
 
 /** Синастрия: две карты и межкартные аспекты (ComputeSynastry). */
-export function computeSynastry(swe, { jd1, jd2, lat1, lon1, hsys = 'P', planets = PLANET_IDS }) {
-	const a = computeNatal(swe, { jd: jd1, lat: lat1, lon: lon1, hsys, planets });
+export function computeSynastry(swe, {
+	jd1, jd2, lat1, lon1, hsys = 'P', planets = PLANET_IDS,
+	aspectAngles = null, maxOrb = null, houses = true,
+}) {
+	const a = computeNatal(swe, { jd: jd1, lat: lat1, lon: lon1, hsys, planets, houses });
 	const b = swe.natal({ jd: jd2, lat: lat1, lon: lon1, hsys, planets });
 	const armc = a.ascmc[2];
 	const eps = swe.position(jd1, -1).lon; // SE_ECL_NUT: eps[0] лежит в lon
@@ -264,6 +292,8 @@ export function computeSynastry(swe, { jd1, jd2, lat1, lon1, hsys = 'P', planets
 		for (const pA of a.planets) {
 			const asp = calculateAspect(pB.lon, pA.lon);
 			if (!asp) continue;
+			if (aspectAngles && !aspectAngles.includes(asp.angle)) continue;
+			if (maxOrb != null && asp.orb > maxOrb) continue;
 			aspects.push({
 				planet_1_id: pB.id,
 				planet_2_id: pA.id,
@@ -289,7 +319,7 @@ export function computeSynastry(swe, { jd1, jd2, lat1, lon1, hsys = 'P', planets
 	};
 	const chart2 = {
 		planets: planetsB.map((p) => [p.id, [p.lon, p.speed]]),
-		cusps: a.cusps,
+		cusps: houses ? a.cusps : [],
 		balance: computeBalance(planetsB),
 	};
 	return { chart1, chart2, aspects };
