@@ -62,6 +62,19 @@ const res = await computeNatalPeriod(swe, {
 - `newton` — метод Ньютона, 4–6 вызовов вместо 20; даты отличаются до ~7 с,
   зато 1 год считается за 0,99 с даже при троттлинге ×6.
 
+## Календарь
+
+`src/calendar.js` — порт `pkg/astro/calendar.go`: ингрессии, станции, точные
+аспекты, лунные дни и «Луна без курса» на том же wasm-движке. Год считается
+один раз и кэшируется на странице; структура — компактные события
+`{d,t,p,a,de,s,chS,end,r,h}` как в `/api/v1/calendar`.
+
+```js
+import { createCalendarClient } from './src/calendar.js';
+const getCalendar = createCalendarClient(swe);
+const events = await getCalendar({ year: 2030, month: 1, timeZone: 'UTC' });
+```
+
 ## Замеры и паритет
 
 ```bash

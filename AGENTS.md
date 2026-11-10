@@ -11,11 +11,14 @@ Swiss Ephemeris 2.10.03 в WebAssembly: bulk-расчёты периодов д�
 | `src/astro_wasm.c` | C-обёртка: `astro_init`, `astro_utc_to_jd`, `astro_period`, `astro_positions`, `astro_house_pos`, `astro_natal`, `astro_houses`, `astro_version` |
 | `src/sweph.js` | ES-обёртка: память, пачки, прогресс, отмена, типизированные массивы |
 | `src/astro.js` | прикладной слой: натал, синастрия, natal-period, аспекты, баланс, дома |
+| `src/calendar.js` | календарь: ингрессии, станции, аспекты, лунные дни, Луна без курса |
 | `web/worker.js` | Worker: `init` / `calc` / `cancel` → `ready` / `progress` / `done` / `error` |
 | `web/bench.html`, `web/bench.js` | стенд для Playwright |
 | `bench/bench.mjs` | Chromium + CPU throttling 1×/4×/6×, позиции и natal-period |
 | `bench/parity.mjs` | wasm vs нативная сборка той же обёртки |
 | `bench/parity-astro.mjs` | клиентский слой vs golden-фикстуры astro3d-e2e |
+| `bench/parity-calendar.mjs` | календарь vs golden `calendar-november` |
+| `bench/parity-calendar-year.mjs` | год клиента vs сервер (2030) |
 | `bench/native_cli.c` | нативный CLI для паритета |
 
 ## Сборка и проверка
@@ -25,6 +28,8 @@ Swiss Ephemeris 2.10.03 в WebAssembly: bulk-расчёты периодов д�
 ./scripts/build-native.sh    # gcc, dist/native/astro-bench
 node bench/parity.mjs        # max |Δ| wasm vs native, порог 1e-9°
 node bench/parity-astro.mjs  # клиентский слой vs golden-фикстуры astro3d-e2e
+node bench/parity-calendar.mjs      # календарь vs golden-фикстура
+node bench/parity-calendar-year.mjs # год клиента vs сервер
 node bench/bench.mjs         # замеры в Chromium (нужен playwright)
 ```
 
